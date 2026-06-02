@@ -51,12 +51,11 @@ def colorings3(n, r):
             # arbitrarily place 1 in the red class.
             # get all combinations of [n] / 1 of size samesize - 1
             for R in itertools.combinations(nlist - {1}, samesize - 1):
-                R = set(R) | {1}
+                R = set(R) | {1} # R union {1}
                 # arbitrarily place the next smallest element in green
-                # [n] / R
-                nlist_R = nlist - R
+                nlist_R = nlist - R # [n] / R
                 # get all combinations of [n] / R / next smallest of size samesize - 1
-                ns = {sorted(nlist_R)[0]}
+                ns = {min(nlist_R)}
                 for G in itertools.combinations(nlist_R - ns, samesize - 1):
                     G = set(G) | ns
                     # then blue is the remainder
@@ -74,12 +73,11 @@ def colorings3(n, r):
                 R = set(R)
                 # now arbitrarily place the next smallest element in green
                 nlist_R = nlist - R
-                ns = {sorted(nlist_R)[0]}
+                ns = {min(nlist_R)}
                 for G in itertools.combinations(nlist_R - ns, samesize - 1):
                     G = set(G) | ns
                     B = nlist_R - G
 
-                    #print([R, G, B])
                     yield [R, G, B]
         
         # or if each size is unique
@@ -94,15 +92,15 @@ def colorings3(n, r):
 
                     yield [R, G, B]
 
-n = 6
-r = 1
-for size in sizes3(n, r):
-    print(size)
+#n = 6
+#r = 1
+#for size in sizes3(n, r):
+#    print(size)
 
-for coloring in colorings3(n, r):
-    print(coloring)
+#for coloring in colorings3(n, r):
+#    print(coloring)
 
-print(len(list(colorings3(n, r))))
+#print(len(list(colorings3(n, r))))
 
 # now we want to find the number of rainbow solutions to x + y = z^2 in a given
 # coloring. it is probably best to first generate a list of every solution in [n].
@@ -110,8 +108,61 @@ print(len(list(colorings3(n, r))))
 # for example when n = 10 we need to only check 1000 (x, y, z)
 
 def get_sollist(n):
-    nlist = range(1, n + 1)
-    solns = np.array([])
-    for x, y, z in itertools.product(nlist, repeat = 3):
+    nlist = set(range(1, n + 1))
+    solns = set([])
+    # for every x y z tuple from [n]. this doesn't include repetitions like 2 + 2 = 2^2
+    for x, y, z in itertools.permutations(nlist, 3):
         if x + y == z**2:
-            x = 1
+            # add to set of solutions (which are sets themselves)
+            solns = solns | {frozenset({x, y, z})}
+    
+    return solns
+
+#for sol in get_sollist(n):
+#    print(sol)
+
+n = 15
+r = 1
+
+# now for every coloring, we want to look for the number of rainbow solutions.
+# for now the program will just print some stats about this.
+print(f'n = {n}, minimum color class size r = {r}, 3 colors (RGB)')
+
+sols = get_sollist(n)
+
+# does this coloring contain a rainbow solutions?
+def hasrb(coloring):
+    R, G, B = coloring
+    # get all x y z tuples from the coloring, where x y z are different colors
+    for rainbow in itertools.product(R, G, B):
+        # if the x y z is in the list of solutions
+        if set(rainbow) in sols:
+            return True, set(rainbow)
+    
+    return False, {}
+
+n_color = 0 # total number of colorings
+n_rbcolor = 0 # total number of rainbow colorings
+for coloring in colorings3(n, r):
+    R, G, B = coloring
+    n_color += 1
+    rb, sol = hasrb(coloring)
+    if rb:
+        n_rbcolor += 1
+        # construct array of R G B
+        RGBs = [0] * n
+        for i in range(1, n + 1):
+            if i in R:
+                RGBs[i - 1] = 'R'
+            elif i in G:
+                RGBs[i - 1] = 'G'
+            elif i in B:
+                RGBs[i - 1] = 'B'
+
+        #print(f'Solution: {sol}')
+        #print(f'Coloring: {' '.join(map(str, range(1, n + 1)))}')
+        #print(f'          {' '.join(RGBs)}')
+
+print(f'Total number of colorings = {n_color}')
+print(f'Total number of rainbow colorings = {n_rbcolor}')
+print(f'Percentage w/ rainbow solutions = {(100 * n_rbcolor / n_color):.2f} %')
